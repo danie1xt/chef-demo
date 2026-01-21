@@ -21,6 +21,7 @@ const Favorites: React.FC<FavoritesProps> = ({
   onDeleteFolder 
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null); // New state for accordion
   const [editForm, setEditForm] = useState<SavedRecipe | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFolder, setActiveFolder] = useState<string>('全部');
@@ -56,21 +57,38 @@ const Favorites: React.FC<FavoritesProps> = ({
     }
   };
 
-  const startEditing = (recipe: SavedRecipe) => {
+  const toggleExpand = (id: string) => {
+    // If we are editing, don't collapse
+    if (editingId === id) return; 
+    setExpandedId(prev => prev === id ? null : id);
+  };
+
+  const startEditing = (recipe: SavedRecipe, e: React.MouseEvent) => {
+    e.stopPropagation();
     setEditingId(recipe.id);
+    setExpandedId(recipe.id); // Ensure it's expanded when editing
     setEditForm({ ...recipe, folder: recipe.folder || DEFAULT_FOLDER });
   };
 
-  const cancelEditing = () => {
+  const cancelEditing = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setEditingId(null);
     setEditForm(null);
   };
 
-  const saveEditing = () => {
+  const saveEditing = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     if (editForm) {
       onUpdate(editForm);
       setEditingId(null);
       setEditForm(null);
+    }
+  };
+
+  const handleDelete = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm("确定要删除这个收藏吗？")) {
+      onRemove(id);
     }
   };
 
@@ -164,7 +182,7 @@ const Favorites: React.FC<FavoritesProps> = ({
         </div>
       </div>
 
-      {/* New Folder Modal (Simple Inline Overlay for now) */}
+      {/* New Folder Modal */}
       {isCreatingFolder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/30 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm transform transition-all scale-100">
@@ -213,63 +231,80 @@ const Favorites: React.FC<FavoritesProps> = ({
           <p className="text-gray-400 text-sm">在此分类或搜索条件下未找到食谱</p>
         </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="flex flex-col gap-4">
           {filteredRecipes.map((recipe) => {
             const isEditing = editingId === recipe.id;
+            const isExpanded = expandedId === recipe.id;
 
             return (
-              <div key={recipe.id} className={`bg-white rounded-3xl shadow-ios border transition-all duration-300 flex flex-col relative overflow-hidden ${isEditing ? 'border-brand-500 ring-2 ring-brand-500/20 shadow-xl z-10' : 'border-gray-100 hover:shadow-ios-hover'}`}>
-                <div className="p-6 flex-1">
-                  {/* Header: Name and Actions */}
-                  <div className="flex justify-between items-start mb-4 pr-16">
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={editForm?.name}
-                        onChange={(e) => handleInputChange('name', e.target.value)}
-                        className="text-xl font-bold text-gray-900 w-full border-b-2 border-brand-500 focus:outline-none bg-transparent px-0 py-1"
-                        placeholder="菜谱名称"
-                      />
-                    ) : (
-                      <div className="flex flex-col">
-                        <h3 className="text-xl font-bold text-gray-900 leading-tight">{recipe.name}</h3>
-                        {/* Folder Tag Display */}
-                        <div className="flex mt-1">
+              <div 
+                key={recipe.id} 
+                className={`bg-white rounded-2xl shadow-ios border transition-all duration-300 overflow-hidden ${isEditing ? 'border-brand-500 ring-2 ring-brand-500/20 shadow-xl z-10' : 'border-gray-100 hover:shadow-ios-hover'}`}
+              >
+                {/* Accordion Header */}
+                <div 
+                  className={`p-4 flex items-center justify-between cursor-pointer active:bg-gray-50 ${isExpanded ? 'border-b border-gray-100' : ''}`}
+                  onClick={() => toggleExpand(recipe.id)}
+                >
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <div className="flex-1 min-w-0">
+                      {isEditing ? (
+                         <input
+                          type="text"
+                          value={editForm?.name}
+                          onClick={e => e.stopPropagation()}
+                          onChange={(e) => handleInputChange('name', e.target.value)}
+                          className="text-lg font-bold text-gray-900 w-full border-b border-brand-500 focus:outline-none bg-transparent px-0 py-0.5"
+                          placeholder="菜谱名称"
+                        />
+                      ) : (
+                        <h3 className="text-base font-bold text-gray-900 truncate">{recipe.name}</h3>
+                      )}
+                      
+                      {!isEditing && (
+                        <div className="flex items-center gap-2 mt-1">
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500">
-                            <svg className="mr-1 h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
-                            {recipe.folder || DEFAULT_FOLDER}
+                             {recipe.folder || DEFAULT_FOLDER}
                           </span>
+                           <span className="text-[10px] text-gray-400 flex items-center">
+                             <svg className="w-3 h-3 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                             {recipe.cookingTime}
+                           </span>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
-                  
-                  {/* Top Right Actions */}
-                   {!isEditing && (
-                      <div className="absolute top-5 right-5 flex gap-1 bg-gray-50 p-1 rounded-xl">
-                        <button 
-                          onClick={() => startEditing(recipe)}
-                          className="p-2 text-gray-400 hover:text-brand-600 hover:bg-white rounded-lg transition-all"
+
+                  {/* Header Actions */}
+                  {!isEditing && (
+                    <div className="flex items-center gap-1 pl-3">
+                       <button 
+                          onClick={(e) => startEditing(recipe, e)}
+                          className="p-2 text-gray-400 hover:text-brand-600 hover:bg-gray-50 rounded-full transition-all"
                           title="编辑"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                         </button>
                         <button 
-                          onClick={() => onRemove(recipe.id)}
-                          className="p-2 text-gray-400 hover:text-red-500 hover:bg-white rounded-lg transition-all"
+                          onClick={(e) => handleDelete(recipe.id, e)}
+                          className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
                           title="删除"
                         >
                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                         </button>
-                      </div>
-                    )}
+                        <div className={`text-gray-300 transform transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                        </div>
+                    </div>
+                  )}
+                </div>
 
-                  {/* Description & Time */}
-                  <div className="mb-5 text-sm">
-                    {isEditing ? (
-                      <div className="space-y-3 bg-gray-50 p-3 rounded-xl">
-                         <div className="flex gap-2">
-                           {/* Folder Selection in Edit Mode - Strict Select */}
+                {/* Expanded Content */}
+                {isExpanded && (
+                  <div className="p-6 bg-gray-50/50 animate-fade-in">
+                      {isEditing && (
+                         <div className="flex gap-2 mb-4">
+                           {/* Folder Selection in Edit Mode */}
                            <div className="flex-1">
                              <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">收藏分类</label>
                              <div className="relative">
@@ -298,8 +333,12 @@ const Favorites: React.FC<FavoritesProps> = ({
                               />
                            </div>
                          </div>
-                        
-                        <div>
+                      )}
+
+                    {/* Description */}
+                    <div className="mb-5">
+                       {isEditing ? (
+                         <div>
                           <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">描述</label>
                           <textarea
                             value={editForm?.description}
@@ -309,81 +348,73 @@ const Favorites: React.FC<FavoritesProps> = ({
                             rows={2}
                           />
                         </div>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="flex items-center text-gray-400 text-xs font-medium mb-3">
-                          <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                          {recipe.cookingTime}
-                        </div>
-                        <p className="text-gray-600 text-sm italic leading-relaxed pl-3 border-l-2 border-brand-300">
-                          "{recipe.description}"
+                       ) : (
+                         <p className="text-gray-600 text-sm italic leading-relaxed">"{recipe.description}"</p>
+                       )}
+                    </div>
+
+                    {/* User Notes (Now contains pre-filled Failure Points) */}
+                    <div className="mb-6 bg-yellow-50/60 p-4 rounded-2xl border border-yellow-100">
+                      <h4 className="text-[10px] font-bold uppercase text-yellow-600 tracking-wider mb-2 flex items-center">
+                        <svg className="w-3 h-3 mr-1.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" /></svg>
+                        我的心得 / 避坑笔记
+                      </h4>
+                      {isEditing ? (
+                        <textarea
+                          value={editForm?.userNotes || ''}
+                          onChange={(e) => handleInputChange('userNotes', e.target.value)}
+                          className="w-full bg-white text-sm text-gray-800 border-none rounded-xl p-3 focus:ring-2 focus:ring-yellow-400"
+                          placeholder="写下你的心得，比如：少放盐，多煮5分钟..."
+                          rows={4}
+                        />
+                      ) : (
+                        <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
+                          {recipe.userNotes ? recipe.userNotes : <span className="text-gray-400 text-xs italic">点击编辑添加备注...</span>}
                         </p>
-                      </>
-                    )}
-                  </div>
+                      )}
+                    </div>
 
-                  {/* User Notes - Editable */}
-                  <div className="mb-6 bg-yellow-50/60 p-4 rounded-2xl border border-yellow-100">
-                    <h4 className="text-[10px] font-bold uppercase text-yellow-600 tracking-wider mb-2 flex items-center">
-                      <svg className="w-3 h-3 mr-1.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" /></svg>
-                      我的心得
-                    </h4>
-                    {isEditing ? (
-                      <textarea
-                        value={editForm?.userNotes || ''}
-                        onChange={(e) => handleInputChange('userNotes', e.target.value)}
-                        className="w-full bg-white text-sm text-gray-800 border-none rounded-xl p-3 focus:ring-2 focus:ring-yellow-400"
-                        placeholder="写下你的心得，比如：少放盐，多煮5分钟..."
-                        rows={3}
-                      />
-                    ) : (
-                      <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
-                        {recipe.userNotes ? recipe.userNotes : <span className="text-gray-400 text-xs italic">点击编辑添加备注...</span>}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Steps - Editable as text block */}
-                  <div>
-                     <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">烹饪步骤</h4>
-                     {isEditing ? (
+                    {/* Steps */}
+                    <div>
+                      <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">烹饪步骤</h4>
+                      {isEditing ? (
                        <textarea
                           value={editForm?.steps.join('\n')}
                           onChange={(e) => handleArrayChange('steps', e.target.value)}
-                          className="w-full text-sm text-gray-700 bg-gray-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-brand-500 min-h-[150px]"
+                          className="w-full text-sm text-gray-700 bg-white border-none rounded-xl p-3 focus:ring-2 focus:ring-brand-500 min-h-[150px]"
                           placeholder="每行一个步骤"
                        />
-                     ) : (
-                      <ol className="relative border-l border-gray-100 ml-2 space-y-3">
-                        {recipe.steps.map((step, i) => (
-                          <li key={i} className="mb-1 ml-4">
-                             <div className="absolute w-1.5 h-1.5 bg-gray-300 rounded-full mt-2 -left-[3.5px]"></div>
-                             <span className="text-sm text-gray-600 leading-relaxed block">{step}</span>
-                          </li>
-                        ))}
-                      </ol>
-                     )}
-                  </div>
-
-                  {/* Actions for Edit Mode */}
-                  {isEditing && (
-                    <div className="mt-6 flex gap-3 pt-5 border-t border-gray-100">
-                      <button
-                        onClick={saveEditing}
-                        className="flex-1 bg-brand-500 hover:bg-brand-600 text-white font-bold py-2.5 rounded-xl transition shadow-lg shadow-brand-500/20 text-sm"
-                      >
-                        保存
-                      </button>
-                      <button
-                        onClick={cancelEditing}
-                        className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-2.5 rounded-xl transition text-sm"
-                      >
-                        取消
-                      </button>
+                      ) : (
+                        <ol className="relative border-l border-gray-200 ml-2 space-y-4">
+                          {recipe.steps.map((step, i) => (
+                            <li key={i} className="mb-1 ml-4">
+                              <div className="absolute w-2 h-2 bg-gray-300 rounded-full mt-1.5 -left-[5px] ring-4 ring-gray-50/50"></div>
+                              <p className="text-sm text-gray-700 leading-relaxed">{step}</p>
+                            </li>
+                          ))}
+                        </ol>
+                      )}
                     </div>
-                  )}
-                </div>
+
+                    {/* Save Actions */}
+                    {isEditing && (
+                      <div className="mt-6 flex gap-3 pt-5 border-t border-gray-200/50">
+                        <button
+                          onClick={(e) => saveEditing(e)}
+                          className="flex-1 bg-brand-500 hover:bg-brand-600 text-white font-bold py-2.5 rounded-xl transition shadow-lg shadow-brand-500/20 text-sm"
+                        >
+                          保存修改
+                        </button>
+                        <button
+                          onClick={(e) => cancelEditing(e)}
+                          className="flex-1 bg-white hover:bg-gray-100 text-gray-600 font-bold py-2.5 rounded-xl transition text-sm border border-gray-200"
+                        >
+                          取消
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}

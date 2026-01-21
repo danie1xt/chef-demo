@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Recipe, UserPreferences, Ingredient, Category } from '../types';
-import { CUISINE_STYLES, TASTE_PREFERENCES, CATEGORY_OPTIONS } from '../constants';
+import { Recipe, UserPreferences, Ingredient, Category } from '../types.ts';
+import { CUISINE_STYLES, TASTE_PREFERENCES, CATEGORY_OPTIONS } from '../constants.ts';
 
 interface RecipeListProps {
   recipes: Recipe[];
@@ -18,6 +18,7 @@ const RecipeList: React.FC<RecipeListProps> = ({ recipes, ingredients, loading, 
   const [mustUseIds, setMustUseIds] = useState<Set<string>>(new Set());
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
   const [savedIndices, setSavedIndices] = useState<Set<number>>(new Set());
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
 
   const toggleIngredient = (id: string) => {
     const next = new Set(mustUseIds);
@@ -41,11 +42,14 @@ const RecipeList: React.FC<RecipeListProps> = ({ recipes, ingredients, loading, 
       cuisine, 
       taste,
       additionalNotes: notes.trim() ? notes.trim() : undefined,
-      mustUseIngredientIds: Array.from(mustUseIds)
+      mustUseIngredientIds: Array.from(mustUseIds) as string[]
     });
   };
 
-  const handleSaveClick = (recipe: Recipe, index: number) => {
+  const handleSaveClick = (e: React.MouseEvent, recipe: Recipe, index: number) => {
+    e.stopPropagation(); // Prevent opening modal when clicking save
+    if (savedIndices.has(index)) return;
+    
     onSave(recipe);
     const next = new Set(savedIndices);
     next.add(index);
@@ -58,6 +62,13 @@ const RecipeList: React.FC<RecipeListProps> = ({ recipes, ingredients, loading, 
     acc[curr.category].push(curr);
     return acc;
   }, {} as Record<Category, Ingredient[]>);
+
+  // Helper to check if a recipe is saved (for the modal)
+  const isRecipeSaved = (r: Recipe) => {
+    // Find index of r in recipes array to check against savedIndices
+    const idx = recipes.indexOf(r);
+    return savedIndices.has(idx);
+  };
 
   return (
     <div className="space-y-8">
@@ -127,7 +138,7 @@ const RecipeList: React.FC<RecipeListProps> = ({ recipes, ingredients, loading, 
                 </button>
 
                 {/* Selected Tags - Monochrome */}
-                {Array.from(mustUseIds).map(id => {
+                {(Array.from(mustUseIds) as string[]).map(id => {
                   const ing = ingredients.find(i => i.id === id);
                   if (!ing) return null;
                   return (
@@ -271,43 +282,135 @@ const RecipeList: React.FC<RecipeListProps> = ({ recipes, ingredients, loading, 
         </div>
       )}
 
-      {/* Recipe Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {recipes.map((recipe, index) => (
-          <div key={index} className="group bg-white rounded-3xl shadow-ios border border-gray-100 overflow-hidden hover:shadow-ios-hover transition-all duration-300 flex flex-col relative animate-fade-in">
-            <div className="p-6 flex-1">
-              <div className="flex justify-between items-start mb-3 pr-8">
-                <h3 className="text-xl font-bold text-gray-900 leading-tight">{recipe.name}</h3>
-                {/* Difficulty Badge - Monochrome */}
-                <span className={`
-                  text-[10px] font-bold px-2 py-1 rounded-full shrink-0 ml-2 uppercase tracking-wide border
-                  ${recipe.difficulty === '简单' ? 'bg-gray-50 border-gray-200 text-gray-600' : 
-                    recipe.difficulty === '困难' ? 'bg-gray-800 border-gray-800 text-white' : 'bg-gray-100 border-gray-200 text-gray-800'}
-                `}>
-                  {recipe.difficulty}
-                </span>
-              </div>
-              
-              <div className="flex items-center text-gray-400 text-xs font-medium mb-5">
-                <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                {recipe.cookingTime}
+      {/* Recipe Grid (Compact Cards) */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {recipes.map((recipe, index) => {
+          const isSaved = savedIndices.has(index);
+          return (
+            <div 
+              key={index} 
+              onClick={() => setSelectedRecipe(recipe)}
+              className="group bg-white rounded-2xl shadow-ios border border-gray-100 overflow-hidden hover:shadow-ios-hover transition-all duration-300 flex flex-col relative animate-fade-in cursor-pointer active:scale-[0.98]"
+            >
+              <div className="p-5 flex-1">
+                 {/* Compact Header */}
+                <div className="flex justify-between items-start mb-2 pr-8">
+                  <h3 className="text-lg font-bold text-gray-900 leading-tight line-clamp-1">{recipe.name}</h3>
+                   <span className={`
+                    text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ml-2 uppercase tracking-wide border
+                    ${recipe.difficulty === '简单' ? 'bg-gray-50 border-gray-200 text-gray-600' : 
+                      recipe.difficulty === '困难' ? 'bg-gray-800 border-gray-800 text-white' : 'bg-gray-100 border-gray-200 text-gray-800'}
+                  `}>
+                    {recipe.difficulty}
+                  </span>
+                </div>
+                
+                {/* Meta Info */}
+                <div className="flex items-center text-gray-400 text-xs font-medium mb-3">
+                  <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                  {recipe.cookingTime}
+                </div>
+
+                {/* Short Description */}
+                <p className="text-gray-500 text-xs italic leading-relaxed line-clamp-2 mb-2">
+                  "{recipe.description}"
+                </p>
+                
+                <div className="flex items-center text-brand-500 text-xs font-bold mt-2 group-hover:underline">
+                  查看详情 & 步骤
+                  <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                </div>
               </div>
 
-              <div className="bg-gray-50 rounded-2xl p-4 mb-5 border border-gray-100/50">
+              {/* Quick Save Button */}
+              <button 
+                onClick={(e) => handleSaveClick(e, recipe, index)}
+                disabled={isSaved}
+                className={`
+                  absolute top-4 right-4 p-2 rounded-full shadow-sm transition-all duration-300
+                  ${isSaved 
+                    ? 'bg-gray-100 text-gray-400 cursor-default scale-100' 
+                    : 'bg-white text-gray-300 hover:text-gray-900 hover:bg-gray-50 hover:scale-110 hover:shadow-md border border-gray-100'}
+                `}
+                title="收藏食谱"
+              >
+                <svg className={`w-4 h-4 transition-transform ${isSaved ? 'fill-current' : 'fill-none'}`} stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Recipe Detail Modal */}
+      {selectedRecipe && (
+        <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:p-4" onClick={() => setSelectedRecipe(null)}>
+          <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-md transition-opacity"></div>
+          
+          <div 
+            className="relative w-full max-w-2xl bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-slide-up sm:animate-fade-in" 
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-start bg-white/90 backdrop-blur-md sticky top-0 z-10">
+              <div className="pr-10">
+                <h3 className="text-2xl font-bold text-gray-900 leading-tight mb-1">{selectedRecipe.name}</h3>
+                <div className="flex items-center gap-3">
+                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide border ${selectedRecipe.difficulty === '简单' ? 'bg-gray-50 border-gray-200 text-gray-600' : selectedRecipe.difficulty === '困难' ? 'bg-gray-800 border-gray-800 text-white' : 'bg-gray-100 border-gray-200 text-gray-800'}`}>
+                    {selectedRecipe.difficulty}
+                  </span>
+                  <div className="flex items-center text-gray-400 text-xs font-medium">
+                    <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    {selectedRecipe.cookingTime}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2 absolute top-4 right-4">
+                 {/* Save Button in Modal */}
+                 <button 
+                  onClick={(e) => {
+                     const idx = recipes.indexOf(selectedRecipe);
+                     if (idx !== -1) handleSaveClick(e, selectedRecipe, idx);
+                  }}
+                  disabled={isRecipeSaved(selectedRecipe)}
+                  className={`
+                    p-2 rounded-full shadow-sm transition-all duration-300 border
+                    ${isRecipeSaved(selectedRecipe)
+                      ? 'bg-gray-100 text-gray-400 cursor-default' 
+                      : 'bg-white text-gray-300 hover:text-red-500 hover:border-red-100 hover:bg-red-50'}
+                  `}
+                >
+                  <svg className={`w-5 h-5 transition-transform ${isRecipeSaved(selectedRecipe) ? 'fill-current' : 'fill-none'}`} stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                </button>
+
+                <button onClick={() => setSelectedRecipe(null)} className="bg-gray-100 p-2 rounded-full text-gray-500 hover:bg-gray-200 transition">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+            </div>
+            
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-white">
+              
+              <div className="bg-gray-50 rounded-2xl p-4 mb-6 border border-gray-100/50">
                 <p className="text-gray-600 text-sm italic leading-relaxed">
-                  "{recipe.description}"
+                  "{selectedRecipe.description}"
                 </p>
               </div>
 
               <div className="mb-6">
-                <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">库存食材</h4>
+                <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">所需食材</h4>
                 <div className="flex flex-wrap gap-1.5">
-                  {recipe.mainIngredientsUsed.map((ing, i) => (
+                  {selectedRecipe.mainIngredientsUsed.map((ing, i) => (
                     <span key={i} className="text-[11px] bg-gray-100 text-gray-700 border border-gray-200 px-2.5 py-1 rounded-md font-medium">
                       {ing}
                     </span>
                   ))}
-                  {recipe.missingIngredients && (recipe.missingIngredients as string[]).map((ing, i) => (
+                  {selectedRecipe.missingIngredients && (selectedRecipe.missingIngredients as string[]).map((ing, i) => (
                      <span key={`missing-${i}`} className="text-[11px] text-gray-400 border border-dashed border-gray-300 px-2.5 py-1 rounded-md font-medium">
                      + {ing}
                    </span>
@@ -315,14 +418,14 @@ const RecipeList: React.FC<RecipeListProps> = ({ recipes, ingredients, loading, 
                 </div>
               </div>
 
-              {recipe.failurePoints && recipe.failurePoints.length > 0 && (
-                <div className="mb-6 bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
-                  <h4 className="text-[10px] font-bold text-gray-900 uppercase tracking-wider mb-2 flex items-center">
-                    <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
-                    避坑指南
+              {selectedRecipe.failurePoints && selectedRecipe.failurePoints.length > 0 && (
+                <div className="mb-6 bg-red-50 p-4 rounded-2xl border border-red-100">
+                  <h4 className="text-[10px] font-bold text-red-800 uppercase tracking-wider mb-2 flex items-center">
+                    <svg className="w-3.5 h-3.5 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                    避坑指南 (必读)
                   </h4>
-                  <ul className="list-disc list-inside text-xs text-gray-600 space-y-1.5 marker:text-gray-400">
-                    {recipe.failurePoints.map((point, i) => (
+                  <ul className="list-disc list-inside text-xs text-red-700 space-y-1.5 marker:text-red-300">
+                    {selectedRecipe.failurePoints.map((point, i) => (
                       <li key={i}>{point}</li>
                     ))}
                   </ul>
@@ -331,36 +434,22 @@ const RecipeList: React.FC<RecipeListProps> = ({ recipes, ingredients, loading, 
 
               <div>
                 <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">烹饪步骤</h4>
-                <ol className="relative border-l border-gray-200 ml-2 space-y-4">
-                  {recipe.steps.map((step, i) => (
+                <ol className="relative border-l border-gray-200 ml-2 space-y-6">
+                  {selectedRecipe.steps.map((step, i) => (
                     <li key={i} className="mb-1 ml-4">
-                      <div className="absolute w-2 h-2 bg-gray-300 rounded-full mt-1.5 -left-1 ring-4 ring-white"></div>
-                      <p className="text-sm text-gray-700 leading-relaxed">{step}</p>
+                      <div className="absolute w-6 h-6 bg-brand-600 rounded-full -left-5 text-white flex items-center justify-center text-[10px] font-bold ring-4 ring-white shadow-sm">
+                        {i + 1}
+                      </div>
+                      <p className="text-sm text-gray-800 leading-loose">{step}</p>
                     </li>
                   ))}
                 </ol>
               </div>
             </div>
-
-            {/* Save Button */}
-            <button 
-              onClick={() => handleSaveClick(recipe, index)}
-              disabled={savedIndices.has(index)}
-              className={`
-                absolute top-5 right-5 p-2.5 rounded-full shadow-sm transition-all duration-300
-                ${savedIndices.has(index) 
-                  ? 'bg-gray-100 text-gray-400 cursor-default scale-100' 
-                  : 'bg-white text-gray-300 hover:text-gray-900 hover:bg-gray-50 hover:scale-110 hover:shadow-md border border-gray-100'}
-              `}
-              title="收藏食谱"
-            >
-              <svg className={`w-5 h-5 transition-transform ${savedIndices.has(index) ? 'fill-current' : 'fill-none'}`} stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-              </svg>
-            </button>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
+
     </div>
   );
 };

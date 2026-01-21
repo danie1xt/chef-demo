@@ -123,11 +123,16 @@ const App: React.FC = () => {
   };
 
   const handleSaveRecipe = (recipe: Recipe) => {
+    // Automatically format failure points into user notes
+    const failureNotes = recipe.failurePoints && recipe.failurePoints.length > 0
+      ? `⚠️ 避坑指南：\n${recipe.failurePoints.map(p => `• ${p}`).join('\n')}`
+      : '';
+
     const newSaved: SavedRecipe = {
       ...recipe,
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
       savedAt: Date.now(),
-      userNotes: '',
+      userNotes: failureNotes, // Pre-fill notes with failure points
       folder: '默认清单' // Default folder
     };
     setSavedRecipes(prev => [newSaved, ...prev]);
@@ -163,7 +168,7 @@ const App: React.FC = () => {
   const getPageTitle = () => {
     switch (activeTab) {
       case Tab.INVENTORY: return '我的冰箱';
-      case Tab.RECIPES: return '大厨食谱';
+      case Tab.RECIPES: return '食谱卡片'; 
       case Tab.FAVORITES: return '收藏夹';
       case Tab.SETTINGS: return '设置';
     }

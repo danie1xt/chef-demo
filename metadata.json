@@ -1,5 +1,5 @@
 {
-  "name": "智能冰箱大厨 (Smart Fridge Chef)",
-  "description": "一个智能厨房助手，帮助你管理冰箱库存，并利用 Gemini AI 根据现有食材生成个性化美味食谱。",
+  "name": "Chef.ai",
+  "description": "一个智能厨房助手，帮助你管理冰箱库存，并利用AI根据现有食材生成个性化美味食谱。",
   "requestFramePermissions": []
 }
