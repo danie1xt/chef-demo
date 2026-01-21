@@ -6,7 +6,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   return {
     // 👇 关键修改：加上这一行，对应你的 GitHub 仓库名
-    base: '/chef-demo/', 
+    base: '/', 
 
     server: {
       port: 3000,
