@@ -15,17 +15,23 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          
       - name: Install dependencies
         run: npm install
+        
       - name: Build
         run: npm run build
+        
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
+          # 👇 这一步最关键！一定要是 ./dist
+          # 如果这里写错，或者缩进不对，就会导致白屏
           path: ./dist
 
   deploy:
