@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>智能冰箱大厨</title>
+    
+    <!-- Google Fonts: Noto Serif SC (思源宋体 - Open Source Songti) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              // Override the default sans stack to make Noto Serif SC the global default
+              sans: [
+                '"Noto Serif SC"', 
+                'Songti SC',
+                'SimSun',
+                'serif',
+                '-apple-system', 
+                'BlinkMacSystemFont', 
+                'Roboto', 
+                'sans-serif'
+              ],
+              serif: [
+                '"Noto Serif SC"',
+                'Songti SC',
+                'SimSun',
+                'serif'
+              ]
+            },
+            colors: {
+              // Warm Stone Grays for standard grays
+              gray: {
+                50: '#FAFAF9',  // stone-50
+                100: '#F5F5F4', // stone-100
+                200: '#E7E5E4', // stone-200
+                300: '#D6D3D1', // stone-300
+                400: '#A8A29E', // stone-400
+                500: '#78716C', // stone-500
+                600: '#57534E', // stone-600
+                700: '#44403C', // stone-700
+                800: '#292524', // stone-800
+                900: '#1C1917', // stone-900
+              },
+              // Map BRAND to a Warm Monochrome Scale (Ink/Paper style)
+              brand: {
+                50: '#F5F5F4',  // Lightest Gray
+                100: '#E7E5E4',
+                200: '#D6D3D1',
+                300: '#A8A29E',
+                400: '#78716C',
+                500: '#57534E',
+                600: '#292524', // Primary Action: Warm Black
+                700: '#1C1917',
+                800: '#0C0A09',
+                900: '#000000',
+              }
+            },
+            boxShadow: {
+              'ios': '0 4px 20px -2px rgba(0, 0, 0, 0.04)',
+              'ios-lg': '0 10px 40px -10px rgba(0, 0, 0, 0.06)',
+              'ios-hover': '0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.08)',
+            },
+            animation: {
+              'slide-up': 'slideUp 0.3s ease-out forwards',
+              'fade-in': 'fadeIn 0.2s ease-out forwards',
+            },
+            keyframes: {
+              slideUp: {
+                '0%': { transform: 'translateY(100%)', opacity: '0' },
+                '100%': { transform: 'translateY(0)', opacity: '1' },
+              },
+              fadeIn: {
+                '0%': { opacity: '0' },
+                '100%': { opacity: '1' },
+              }
+            }
+          }
+        }
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "@google/genai": "https://esm.sh/@google/genai@^1.37.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
+  }
+}
+</script>
+<style>
+  /* iOS smooth scrolling & no-scrollbar utility */
+  body {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  /* Custom Scrollbar for desktop within containers */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #E7E5E4;
+    border-radius: 20px;
+  }
+</style>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-gray-100 text-gray-900 min-h-screen font-sans selection:bg-gray-300 selection:text-black">
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
